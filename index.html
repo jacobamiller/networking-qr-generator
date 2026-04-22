@@ -660,16 +660,19 @@
       vcard += 'FN:' + escVCard(profile.name) + '\r\n';
       if (profile.company) vcard += 'ORG:' + escVCard(profile.company) + '\r\n';
       if (profile.title) vcard += 'TITLE:' + escVCard(profile.title) + '\r\n';
-      if (profile.email) vcard += 'EMAIL;TYPE=INTERNET:' + escVCard(profile.email) + '\r\n';
-      if (profile.phone) vcard += 'TEL;TYPE=CELL:' + escVCard(profile.phone) + '\r\n';
+      if (profile.email) vcard += 'EMAIL:' + profile.email + '\r\n';
+      if (profile.phone) vcard += 'TEL:' + profile.phone + '\r\n';
       // URLs must NOT be escaped (no semicolon/comma escaping)
       if (profile.website) vcard += 'URL:' + profile.website + '\r\n';
       if (profile.linkedin) {
         vcard += 'URL:' + profile.linkedin + '\r\n';
         vcard += 'X-SOCIALPROFILE;type=linkedin:' + profile.linkedin + '\r\n';
       }
-      if (profile.photo) vcard += 'PHOTO;VALUE=URI:' + profile.photo + '\r\n';
       vcard += 'NOTE:' + escVCard(noteText) + '\r\n';
+      // Photo added only if total stays under ~1800 chars (QR reliability limit)
+      if (profile.photo && (vcard.length + profile.photo.length + 20) <= 1800) {
+        vcard += 'PHOTO;VALUE=URI:' + profile.photo + '\r\n';
+      }
       vcard += 'END:VCARD\r\n';
 
       return { vcard, noteText };
@@ -677,7 +680,9 @@
 
     function escVCard(str) {
       if (!str) return '';
-      return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+      // Only escape backslashes, commas, and newlines in values
+      // Do NOT escape semicolons — they break field parameters like EMAIL;TYPE=
+      return str.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/\n/g, '\\n');
     }
 
     function formatDateReadable(isoDate) {
