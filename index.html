@@ -511,6 +511,19 @@
         <label for="profileTitle">Job Title</label>
         <input type="text" id="profileTitle" placeholder="Product Manager">
       </div>
+      <div class="form-group">
+        <label for="profileWebsite">Company Website</label>
+        <input type="url" id="profileWebsite" placeholder="https://acme.com">
+      </div>
+      <div class="form-group">
+        <label for="profileLinkedin">LinkedIn URL</label>
+        <input type="url" id="profileLinkedin" placeholder="https://linkedin.com/in/janesmith">
+      </div>
+      <div class="form-group">
+        <label for="profilePhoto">Profile Photo URL</label>
+        <input type="url" id="profilePhoto" placeholder="https://example.com/photo.jpg">
+        <div style="font-size:11px;color:var(--gray-400);margin-top:4px;">Direct link to a JPEG/PNG image. Shown in the contact card when scanned.</div>
+      </div>
       <div style="margin-top:18px;">
         <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
       </div>
@@ -572,6 +585,9 @@
         phone: document.getElementById('profilePhone').value.trim(),
         company: document.getElementById('profileCompany').value.trim(),
         title: document.getElementById('profileTitle').value.trim(),
+        website: document.getElementById('profileWebsite').value.trim(),
+        linkedin: document.getElementById('profileLinkedin').value.trim(),
+        photo: document.getElementById('profilePhoto').value.trim(),
       };
 
       if (!profile.name) {
@@ -592,6 +608,9 @@
       document.getElementById('profilePhone').value = profile.phone || '';
       document.getElementById('profileCompany').value = profile.company || '';
       document.getElementById('profileTitle').value = profile.title || '';
+      document.getElementById('profileWebsite').value = profile.website || '';
+      document.getElementById('profileLinkedin').value = profile.linkedin || '';
+      document.getElementById('profilePhoto').value = profile.photo || '';
 
       const status = document.getElementById('profileStatus');
       if (profile.name) {
@@ -643,6 +662,13 @@
       if (profile.title) vcard += 'TITLE:' + escVCard(profile.title) + '\r\n';
       if (profile.email) vcard += 'EMAIL;TYPE=INTERNET:' + escVCard(profile.email) + '\r\n';
       if (profile.phone) vcard += 'TEL;TYPE=CELL:' + escVCard(profile.phone) + '\r\n';
+      if (profile.website) vcard += 'URL:' + escVCard(profile.website) + '\r\n';
+      if (profile.linkedin) {
+        vcard += 'X-SOCIALPROFILE;type=linkedin:' + escVCard(profile.linkedin) + '\r\n';
+        vcard += 'item1.URL:' + escVCard(profile.linkedin) + '\r\n';
+        vcard += 'item1.X-ABLabel:LinkedIn\r\n';
+      }
+      if (profile.photo) vcard += 'PHOTO;VALUE=URI:' + escVCard(profile.photo) + '\r\n';
       vcard += 'NOTE:' + escVCard(noteText) + '\r\n';
       vcard += 'END:VCARD\r\n';
 
@@ -656,7 +682,7 @@
 
     function formatDateReadable(isoDate) {
       const d = new Date(isoDate + 'T00:00:00');
-      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
     // ── QR Code Generation ────────────────────────────────
