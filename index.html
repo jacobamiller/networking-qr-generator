@@ -662,13 +662,13 @@
       if (profile.title) vcard += 'TITLE:' + escVCard(profile.title) + '\r\n';
       if (profile.email) vcard += 'EMAIL;TYPE=INTERNET:' + escVCard(profile.email) + '\r\n';
       if (profile.phone) vcard += 'TEL;TYPE=CELL:' + escVCard(profile.phone) + '\r\n';
-      if (profile.website) vcard += 'URL:' + escVCard(profile.website) + '\r\n';
+      // URLs must NOT be escaped (no semicolon/comma escaping)
+      if (profile.website) vcard += 'URL:' + profile.website + '\r\n';
       if (profile.linkedin) {
-        vcard += 'X-SOCIALPROFILE;type=linkedin:' + escVCard(profile.linkedin) + '\r\n';
-        vcard += 'item1.URL:' + escVCard(profile.linkedin) + '\r\n';
-        vcard += 'item1.X-ABLabel:LinkedIn\r\n';
+        vcard += 'URL:' + profile.linkedin + '\r\n';
+        vcard += 'X-SOCIALPROFILE;type=linkedin:' + profile.linkedin + '\r\n';
       }
-      if (profile.photo) vcard += 'PHOTO;VALUE=URI:' + escVCard(profile.photo) + '\r\n';
+      if (profile.photo) vcard += 'PHOTO;VALUE=URI:' + profile.photo + '\r\n';
       vcard += 'NOTE:' + escVCard(noteText) + '\r\n';
       vcard += 'END:VCARD\r\n';
 
