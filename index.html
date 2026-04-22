@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Networking QR Code Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --blue-700: #1a56db;
+      --blue-600: #2563eb;
+      --blue-500: #3b82f6;
+      --blue-100: #dbeafe;
+      --blue-50: #eff6ff;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --red-500: #ef4444;
+      --green-600: #16a34a;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: var(--blue-600);
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-md);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-icon {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: background 0.15s;
+    }
+    .btn-icon:hover { background: rgba(255,255,255,0.25); }
+    .btn-icon.active { background: rgba(255,255,255,0.3); }
+
+    /* Main content */
+    main {
+      flex: 1;
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Pages */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+
+    /* Form elements */
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-700);
+      margin-bottom: 4px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--gray-300);
+      border-radius: 8px;
+      font-size: 16px; /* prevents zoom on iOS */
+      font-family: inherit;
+      color: var(--gray-800);
+      background: white;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--blue-500);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      font-family: inherit;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--blue-600);
+      color: white;
+      width: 100%;
+    }
+    .btn-primary:hover { background: var(--blue-700); }
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+      border: 1px solid var(--gray-200);
+    }
+    .btn-secondary:hover { background: var(--gray-200); }
+    .btn-sm {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+
+    /* QR Code display */
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .qr-container #qrcode {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-md);
+    }
+    .qr-container #qrcode img,
+    .qr-container #qrcode canvas {
+      display: block;
+      width: 280px !important;
+      height: 280px !important;
+    }
+    .qr-note-display {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--blue-50);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--gray-700);
+      text-align: center;
+      max-width: 320px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .qr-event-label {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+
+    /* Empty / placeholder states */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--gray-400);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; line-height: 1.5; }
+
+    /* Profile status badge */
+    .profile-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-bottom: 16px;
+    }
+    .profile-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gray-300);
+    }
+    .profile-status.saved .dot { background: var(--green-600); }
+    .profile-status.saved { color: var(--green-600); }
+
+    /* History list */
+    .history-list { list-style: none; }
+    .history-item {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item-date {
+      font-size: 12px;
+      color: var(--gray-400);
+      margin-bottom: 4px;
+    }
+    .history-item-event {
+      font-size: 13px;
+      color: var(--blue-600);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .history-item-note {
+      font-size: 14px;
+      color: var(--gray-700);
+      line-height: 1.4;
+    }
+    .history-item-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px 16px 0 0;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px 20px;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--gray-400);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--gray-800);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 300;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Nav tabs (bottom) */
+    .bottom-nav {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      border-top: 1px solid var(--gray-200);
+      display: flex;
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 10px 0;
+      border: none;
+      background: none;
+      color: var(--gray-400);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .nav-tab .nav-icon { font-size: 20px; }
+    .nav-tab.active { color: var(--blue-600); }
+
+    /* Warning badge */
+    .stale-warning {
+      display: none;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+    .stale-warning.show { display: block; }
+
+    /* Desktop adjustments */
+    @media (min-width: 600px) {
+      main { padding: 24px; }
+      .modal {
+        border-radius: 16px;
+        margin-bottom: 40px;
+        max-height: 80vh;
+      }
+      .modal-overlay { align-items: center; }
+      .qr-container #qrcode img,
+      .qr-container #qrcode canvas {
+        width: 320px !important;
+        height: 320px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>QR Networking</h1>
+    <div class="header-actions">
+      <button class="btn-icon" id="btnEditProfile" title="Edit Profile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Generator Page -->
+    <div class="page active" id="pageGenerator">
+      <!-- QR display area (shown after generation) -->
+      <div id="qrDisplay" style="display:none;">
+        <div class="qr-container">
+          <div id="qrcode"></div>
+          <div class="qr-note-display" id="qrNoteText"></div>
+          <div class="qr-event-label" id="qrEventLabel"></div>
+        </div>
+        <div class="stale-warning" id="staleWarning">
+          This QR code was generated over 12 hours ago. Consider regenerating it with a fresh note before sharing.
+        </div>
+      </div>
+
+      <!-- Profile incomplete notice -->
+      <div class="card" id="profileNotice" style="display:none;">
+        <div class="empty-state">
+          <div class="icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <p>Set up your profile first so your contact info can be encoded in QR codes.</p>
+          <button class="btn btn-primary" style="margin-top:14px;width:auto;" onclick="openProfileModal()">Set Up Profile</button>
+        </div>
+      </div>
+
+      <!-- Event form -->
+      <div class="card" id="eventFormCard">
+        <div class="card-title">Event Details</div>
+        <div class="form-group">
+          <label for="eventDate">Date</label>
+          <input type="date" id="eventDate">
+        </div>
+        <div class="form-group">
+          <label for="eventName">Event / Location</label>
+          <input type="text" id="eventName" placeholder="e.g. TechCrunch Disrupt">
+        </div>
+        <div class="form-group">
+          <label for="eventNotes">Notes (included in vCard)</label>
+          <textarea id="eventNotes" placeholder="e.g. We discussed AI tooling for startups"></textarea>
+        </div>
+        <button class="btn btn-primary" id="btnGenerate" onclick="generateQR()">Generate QR Code</button>
+      </div>
+    </div>
+
+    <!-- History Page -->
+    <div class="page" id="pageHistory">
+      <div class="card">
+        <div class="card-title">History</div>
+        <div id="historyEmpty" class="empty-state">
+          <div class="icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <p>No QR codes generated yet.<br>Create your first one on the Generator tab.</p>
+        </div>
+        <ul class="history-list" id="historyList"></ul>
+      </div>
+    </div>
+  </main>
+
+  <div class="bottom-nav">
+    <button class="nav-tab active" data-page="pageGenerator">
+      <span class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </span>
+      Generator
+    </button>
+    <button class="nav-tab" data-page="pageHistory">
+      <span class="nav-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </span>
+      History
+    </button>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit Profile</h2>
+        <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+      </div>
+      <div class="profile-status" id="profileStatus">
+        <span class="dot"></span>
+        <span class="status-text">Not saved</span>
+      </div>
+      <div class="form-group">
+        <label for="profileName">Full Name *</label>
+        <input type="text" id="profileName" placeholder="Jane Smith">
+      </div>
+      <div class="form-group">
+        <label for="profileEmail">Email</label>
+        <input type="email" id="profileEmail" placeholder="jane@example.com">
+      </div>
+      <div class="form-group">
+        <label for="profilePhone">Phone</label>
+        <input type="tel" id="profilePhone" placeholder="+1 555 123 4567">
+      </div>
+      <div class="form-group">
+        <label for="profileCompany">Company</label>
+        <input type="text" id="profileCompany" placeholder="Acme Corp">
+      </div>
+      <div class="form-group">
+        <label for="profileTitle">Job Title</label>
+        <input type="text" id="profileTitle" placeholder="Product Manager">
+      </div>
+      <div style="margin-top:18px;">
+        <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────
+    let profile = {};
+    let history = [];
+    let lastGeneratedTimestamp = null;
+    let staleCheckInterval = null;
+
+    // ── Init ──────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
+      loadHistory();
+      initDate();
+      initNav();
+      restoreLastQR();
+      startStaleCheck();
+    });
+
+    // ── Navigation ────────────────────────────────────────
+    function initNav() {
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(tab.dataset.page).classList.add('active');
+        });
+      });
+    }
+
+    // ── Date ──────────────────────────────────────────────
+    function initDate() {
+      const dateInput = document.getElementById('eventDate');
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    // ── Profile ───────────────────────────────────────────
+    function loadProfile() {
+      const stored = localStorage.getItem('nqr_profile');
+      if (stored) {
+        profile = JSON.parse(stored);
+        updateProfileUI();
+      }
+      checkProfileComplete();
+    }
+
+    function saveProfile() {
+      profile = {
+        name: document.getElementById('profileName').value.trim(),
+        email: document.getElementById('profileEmail').value.trim(),
+        phone: document.getElementById('profilePhone').value.trim(),
+        company: document.getElementById('profileCompany').value.trim(),
+        title: document.getElementById('profileTitle').value.trim(),
+      };
+
+      if (!profile.name) {
+        showToast('Name is required');
+        return;
+      }
+
+      localStorage.setItem('nqr_profile', JSON.stringify(profile));
+      updateProfileUI();
+      checkProfileComplete();
+      closeProfileModal();
+      showToast('Profile saved');
+    }
+
+    function updateProfileUI() {
+      document.getElementById('profileName').value = profile.name || '';
+      document.getElementById('profileEmail').value = profile.email || '';
+      document.getElementById('profilePhone').value = profile.phone || '';
+      document.getElementById('profileCompany').value = profile.company || '';
+      document.getElementById('profileTitle').value = profile.title || '';
+
+      const status = document.getElementById('profileStatus');
+      if (profile.name) {
+        status.classList.add('saved');
+        status.querySelector('.status-text').textContent = 'Profile saved';
+      }
+    }
+
+    function checkProfileComplete() {
+      const complete = profile && profile.name;
+      document.getElementById('profileNotice').style.display = complete ? 'none' : 'block';
+      document.getElementById('btnGenerate').disabled = !complete;
+      document.getElementById('btnGenerate').style.opacity = complete ? '1' : '0.5';
+    }
+
+    function openProfileModal() {
+      updateProfileUI();
+      document.getElementById('profileModal').classList.add('open');
+    }
+
+    function closeProfileModal() {
+      document.getElementById('profileModal').classList.remove('open');
+    }
+
+    document.getElementById('btnEditProfile').addEventListener('click', openProfileModal);
+
+    // Close modal on overlay click
+    document.getElementById('profileModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeProfileModal();
+    });
+
+    // ── vCard Generation ──────────────────────────────────
+    function buildVCard(profile, eventName, eventDate, notes) {
+      const nameParts = profile.name.split(' ');
+      const lastName = nameParts.length > 1 ? nameParts.pop() : '';
+      const firstName = nameParts.join(' ');
+
+      const formattedDate = formatDateReadable(eventDate);
+      let noteText = 'Met ' + profile.name;
+      if (eventName) noteText += ' at ' + eventName;
+      noteText += ' on ' + formattedDate + '.';
+      if (notes) noteText += ' ' + notes;
+
+      let vcard = 'BEGIN:VCARD\r\n';
+      vcard += 'VERSION:3.0\r\n';
+      vcard += 'N:' + escVCard(lastName) + ';' + escVCard(firstName) + ';;;\r\n';
+      vcard += 'FN:' + escVCard(profile.name) + '\r\n';
+      if (profile.company) vcard += 'ORG:' + escVCard(profile.company) + '\r\n';
+      if (profile.title) vcard += 'TITLE:' + escVCard(profile.title) + '\r\n';
+      if (profile.email) vcard += 'EMAIL;TYPE=INTERNET:' + escVCard(profile.email) + '\r\n';
+      if (profile.phone) vcard += 'TEL;TYPE=CELL:' + escVCard(profile.phone) + '\r\n';
+      vcard += 'NOTE:' + escVCard(noteText) + '\r\n';
+      vcard += 'END:VCARD\r\n';
+
+      return { vcard, noteText };
+    }
+
+    function escVCard(str) {
+      if (!str) return '';
+      return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    }
+
+    function formatDateReadable(isoDate) {
+      const d = new Date(isoDate + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    // ── QR Code Generation ────────────────────────────────
+    function generateQR() {
+      if (!profile || !profile.name) {
+        showToast('Set up your profile first');
+        openProfileModal();
+        return;
+      }
+
+      const eventDate = document.getElementById('eventDate').value;
+      const eventName = document.getElementById('eventName').value.trim();
+      const notes = document.getElementById('eventNotes').value.trim();
+
+      if (!eventDate) {
+        showToast('Please select a date');
+        return;
+      }
+
+      const { vcard, noteText } = buildVCard(profile, eventName, eventDate, notes);
+
+      // Clear previous QR code
+      const qrEl = document.getElementById('qrcode');
+      qrEl.innerHTML = '';
+
+      // Generate new QR code
+      new QRCode(qrEl, {
+        text: vcard,
+        width: 280,
+        height: 280,
+        colorDark: '#111827',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+
+      // Show display area
+      document.getElementById('qrDisplay').style.display = 'block';
+      document.getElementById('qrNoteText').textContent = noteText;
+      document.getElementById('qrEventLabel').textContent = eventName ?
+        eventName + ' \u2022 ' + formatDateReadable(eventDate) :
+        formatDateReadable(eventDate);
+
+      // Save to history
+      const entry = {
+        id: Date.now().toString(36),
+        date: eventDate,
+        eventName: eventName,
+        noteText: noteText,
+        notes: notes,
+        timestamp: new Date().toISOString(),
+      };
+      history.unshift(entry);
+      saveHistory();
+      renderHistory();
+
+      // Persist last QR for page reload
+      lastGeneratedTimestamp = Date.now();
+      localStorage.setItem('nqr_lastQR', JSON.stringify({
+        eventDate, eventName, notes, generatedAt: lastGeneratedTimestamp,
+      }));
+
+      // Reset stale warning
+      updateStaleWarning();
+
+      // Scroll to top to show QR
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      showToast('QR code generated');
+    }
+
+    // ── Restore last QR on page load ──────────────────────
+    function restoreLastQR() {
+      const stored = localStorage.getItem('nqr_lastQR');
+      if (!stored || !profile || !profile.name) return;
+
+      const { eventDate, eventName, notes, generatedAt } = JSON.parse(stored);
+      lastGeneratedTimestamp = generatedAt;
+
+      const { vcard, noteText } = buildVCard(profile, eventName, eventDate, notes);
+
+      const qrEl = document.getElementById('qrcode');
+      qrEl.innerHTML = '';
+      new QRCode(qrEl, {
+        text: vcard,
+        width: 280,
+        height: 280,
+        colorDark: '#111827',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+
+      document.getElementById('qrDisplay').style.display = 'block';
+      document.getElementById('qrNoteText').textContent = noteText;
+      document.getElementById('qrEventLabel').textContent = eventName ?
+        eventName + ' \u2022 ' + formatDateReadable(eventDate) :
+        formatDateReadable(eventDate);
+
+      // Restore form fields
+      document.getElementById('eventDate').value = eventDate;
+      document.getElementById('eventName').value = eventName || '';
+      document.getElementById('eventNotes').value = notes || '';
+
+      updateStaleWarning();
+    }
+
+    // ── Stale Warning ─────────────────────────────────────
+    function startStaleCheck() {
+      staleCheckInterval = setInterval(updateStaleWarning, 60000); // check every minute
+    }
+
+    function updateStaleWarning() {
+      const el = document.getElementById('staleWarning');
+      if (!lastGeneratedTimestamp) {
+        el.classList.remove('show');
+        return;
+      }
+      const hoursOld = (Date.now() - lastGeneratedTimestamp) / (1000 * 60 * 60);
+      if (hoursOld >= 12) {
+        el.classList.add('show');
+      } else {
+        el.classList.remove('show');
+      }
+    }
+
+    // ── History ───────────────────────────────────────────
+    function loadHistory() {
+      const stored = localStorage.getItem('nqr_history');
+      if (stored) history = JSON.parse(stored);
+      renderHistory();
+    }
+
+    function saveHistory() {
+      localStorage.setItem('nqr_history', JSON.stringify(history));
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      const empty = document.getElementById('historyEmpty');
+
+      if (history.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      list.innerHTML = history.map(item => {
+        const displayDate = formatDateReadable(item.date);
+        return '<li class="history-item">' +
+          '<div class="history-item-date">' + escHtml(displayDate) + '</div>' +
+          (item.eventName ? '<div class="history-item-event">' + escHtml(item.eventName) + '</div>' : '') +
+          '<div class="history-item-note">' + escHtml(item.noteText) + '</div>' +
+          '<div class="history-item-actions">' +
+            '<button class="btn btn-secondary btn-sm" onclick="reloadHistoryItem(\'' + item.id + '\')">Reload</button>' +
+            '<button class="btn btn-secondary btn-sm" onclick="deleteHistoryItem(\'' + item.id + '\')">Delete</button>' +
+          '</div>' +
+        '</li>';
+      }).join('');
+    }
+
+    function reloadHistoryItem(id) {
+      const item = history.find(h => h.id === id);
+      if (!item) return;
+
+      document.getElementById('eventDate').value = item.date;
+      document.getElementById('eventName').value = item.eventName || '';
+      document.getElementById('eventNotes').value = item.notes || '';
+
+      // Switch to generator tab
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-page="pageGenerator"]').classList.add('active');
+      document.getElementById('pageGenerator').classList.add('active');
+
+      generateQR();
+    }
+
+    function deleteHistoryItem(id) {
+      history = history.filter(h => h.id !== id);
+      saveHistory();
+      renderHistory();
+      showToast('Entry deleted');
+    }
+
+    // ── Utils ─────────────────────────────────────────────
+    function escHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeProfileModal();
+    });
+  </script>
+</body>
+</html>
