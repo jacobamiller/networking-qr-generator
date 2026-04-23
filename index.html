@@ -643,19 +643,53 @@
     });
 
     // ── vCard Generation ──────────────────────────────────
+    // Build note text (shared by both MECARD and vCard)
+    function buildNoteText(profile, eventName, eventDate, notes) {
+      const formattedDate = formatDateReadable(eventDate);
+      let noteText = 'Met ' + profile.name;
+      if (eventName) noteText += ' at ' + eventName;
+      noteText += ' on ' + formattedDate + '.';
+      if (notes) noteText += ' ' + notes;
+      return noteText;
+    }
+
+    // MECARD format for QR codes — universally supported by iOS + Android cameras
+    function buildMecard(profile, eventName, eventDate, notes) {
+      let noteText = buildNoteText(profile, eventName, eventDate, notes);
+      // Add secondary URL to note since MECARD only supports one URL
+      var primaryUrl = profile.linkedin ? ensureHttps(profile.linkedin) : (profile.website ? ensureHttps(profile.website) : '');
+      var secondaryUrl = profile.linkedin && profile.website ? ensureHttps(profile.website) : '';
+      if (secondaryUrl) noteText += ' | Website: ' + secondaryUrl;
+
+      const nameParts = profile.name.split(' ').filter(p => p);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+      // MECARD escaping: backslash-escape semicolons and backslashes
+      function escMe(s) { return s ? s.replace(/\\/g, '\\\\').replace(/;/g, '\\;') : ''; }
+
+      let mecard = 'MECARD:';
+      mecard += 'N:' + escMe(lastName) + ',' + escMe(firstName) + ';';
+      if (profile.company) mecard += 'ORG:' + escMe(profile.company) + ';';
+      if (profile.title) mecard += 'TITLE:' + escMe(profile.title) + ';';
+      if (profile.email) mecard += 'EMAIL:' + escMe(profile.email) + ';';
+      if (profile.phone) mecard += 'TEL:' + escMe(profile.phone) + ';';
+      if (primaryUrl) mecard += 'URL:' + escMe(primaryUrl) + ';';
+      mecard += 'NOTE:' + escMe(noteText) + ';';
+      mecard += ';';
+
+      return { mecard, noteText };
+    }
+
+    // vCard 3.0 for .vcf file download — full detail, multiple URLs, photo
     function buildVCard(profile, eventName, eventDate, notes) {
       const nameParts = profile.name.split(' ').filter(p => p);
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
       const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
 
-      const formattedDate = formatDateReadable(eventDate);
-      let noteText = 'Met ' + profile.name;
-      if (eventName) noteText += ' at ' + eventName;
-      noteText += ' on ' + formattedDate + '.';
-      if (notes) noteText += ' ' + notes;
+      let noteText = buildNoteText(profile, eventName, eventDate, notes);
 
-      // Build vCard — RFC 6350 requires \r\n line endings (Android strict)
       const lines = [
         'BEGIN:VCARD',
         'VERSION:3.0',
@@ -666,18 +700,11 @@
       if (profile.title) lines.push('TITLE:' + profile.title);
       if (profile.email) lines.push('EMAIL:' + profile.email);
       if (profile.phone) lines.push('TEL:' + profile.phone);
-      // Single URL — multiple confuse QR scanners
-      var primaryUrl = profile.linkedin ? ensureHttps(profile.linkedin) : (profile.website ? ensureHttps(profile.website) : '');
-      var secondaryUrl = profile.linkedin && profile.website ? ensureHttps(profile.website) : '';
-      if (primaryUrl) lines.push('URL:' + primaryUrl);
-      if (secondaryUrl) noteText += '\\nWebsite: ' + secondaryUrl;
-      lines.push('NOTE:' + escVCard(noteText));
-      // Photo only if total stays under 1800 chars for QR reliability
-      const base = lines.join('\r\n') + '\r\nEND:VCARD\r\n';
+      if (profile.website) lines.push('URL:' + ensureHttps(profile.website));
+      if (profile.linkedin) lines.push('URL:' + ensureHttps(profile.linkedin));
       const photoUrl = ensureHttps(profile.photo);
-      if (photoUrl && (base.length + photoUrl.length + 25) <= 1800) {
-        lines.push('PHOTO;VALUE=URI:' + photoUrl);
-      }
+      if (photoUrl) lines.push('PHOTO;VALUE=URI:' + photoUrl);
+      lines.push('NOTE:' + escVCard(noteText));
       lines.push('END:VCARD');
 
       const vcard = lines.join('\r\n') + '\r\n';
@@ -735,15 +762,17 @@
         return;
       }
 
-      const { vcard, noteText } = buildVCard(profile, eventName, eventDate, notes);
+      // MECARD for QR (universal phone camera support), vCard for .vcf download
+      const { mecard, noteText } = buildMecard(profile, eventName, eventDate, notes);
+      buildVCard(profile, eventName, eventDate, notes); // sets lastVCardData for download
 
       // Clear previous QR code
       const qrEl = document.getElementById('qrcode');
       qrEl.innerHTML = '';
 
-      // Generate new QR code
+      // Generate new QR code with MECARD
       new QRCode(qrEl, {
-        text: vcard,
+        text: mecard,
         width: 280,
         height: 280,
         colorDark: '#111827',
@@ -755,7 +784,7 @@
       document.getElementById('qrDisplay').style.display = 'block';
       document.getElementById('qrNoteText').textContent = noteText;
 
-      // Show vCard debug + download button
+      // Show debug + download button
       let debugEl = document.getElementById('vcardDebug');
       if (!debugEl) {
         debugEl = document.createElement('div');
@@ -764,10 +793,10 @@
         document.getElementById('qrDisplay').appendChild(debugEl);
       }
       debugEl.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-        '<strong style="font-size:11px;">vCard Data (' + vcard.length + ' chars)</strong>' +
+        '<strong style="font-size:11px;">QR Data — MECARD (' + mecard.length + ' chars)</strong>' +
         '<button onclick="downloadVcf()" style="padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px;">Download .vcf</button>' +
         '</div>' +
-        '<pre style="white-space:pre-wrap;word-break:break-all;font-size:9px;color:#374151;max-height:150px;overflow:auto;">' + vcard.replace(/</g, '&lt;') + '</pre>';
+        '<pre style="white-space:pre-wrap;word-break:break-all;font-size:9px;color:#374151;max-height:150px;overflow:auto;">' + mecard.replace(/</g, '&lt;') + '</pre>';
       document.getElementById('qrEventLabel').textContent = eventName ?
         eventName + ' \u2022 ' + formatDateReadable(eventDate) :
         formatDateReadable(eventDate);
@@ -808,12 +837,13 @@
       const { eventDate, eventName, notes, generatedAt } = JSON.parse(stored);
       lastGeneratedTimestamp = generatedAt;
 
-      const { vcard, noteText } = buildVCard(profile, eventName, eventDate, notes);
+      const { mecard, noteText } = buildMecard(profile, eventName, eventDate, notes);
+      buildVCard(profile, eventName, eventDate, notes); // sets lastVCardData for download
 
       const qrEl = document.getElementById('qrcode');
       qrEl.innerHTML = '';
       new QRCode(qrEl, {
-        text: vcard,
+        text: mecard,
         width: 280,
         height: 280,
         colorDark: '#111827',
