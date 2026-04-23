@@ -654,27 +654,32 @@
     }
 
     // MECARD format for QR codes — universally supported by iOS + Android cameras
+    // Supported fields: N, TEL, EMAIL, URL, ORG, NOTE, ADR, BDAY, NICKNAME
+    // NOT supported: TITLE (not part of MECARD spec)
     function buildMecard(profile, eventName, eventDate, notes) {
       let noteText = buildNoteText(profile, eventName, eventDate, notes);
+      // Add title to note since MECARD doesn't support TITLE
+      if (profile.title) noteText = profile.title + '. ' + noteText;
       // Add secondary URL to note since MECARD only supports one URL
       var primaryUrl = profile.linkedin ? ensureHttps(profile.linkedin) : (profile.website ? ensureHttps(profile.website) : '');
       var secondaryUrl = profile.linkedin && profile.website ? ensureHttps(profile.website) : '';
-      if (secondaryUrl) noteText += ' | Website: ' + secondaryUrl;
+      if (secondaryUrl) noteText += ' Website: ' + secondaryUrl;
 
       const nameParts = profile.name.split(' ').filter(p => p);
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
-      // MECARD escaping: backslash-escape semicolons and backslashes
-      function escMe(s) { return s ? s.replace(/\\/g, '\\\\').replace(/;/g, '\\;') : ''; }
+      // MECARD escaping: backslash-escape semicolons, colons, and backslashes
+      function escMe(s) { return s ? s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/:/g, '\\:') : ''; }
+      // URLs should NOT be escaped (colons are structural)
+      function escMeUrl(s) { return s ? s.replace(/\\/g, '\\\\').replace(/;/g, '\\;') : ''; }
 
       let mecard = 'MECARD:';
       mecard += 'N:' + escMe(lastName) + ',' + escMe(firstName) + ';';
       if (profile.company) mecard += 'ORG:' + escMe(profile.company) + ';';
-      if (profile.title) mecard += 'TITLE:' + escMe(profile.title) + ';';
-      if (profile.email) mecard += 'EMAIL:' + escMe(profile.email) + ';';
+      if (profile.email) mecard += 'EMAIL:' + profile.email + ';';
       if (profile.phone) mecard += 'TEL:' + escMe(profile.phone) + ';';
-      if (primaryUrl) mecard += 'URL:' + escMe(primaryUrl) + ';';
+      if (primaryUrl) mecard += 'URL:' + escMeUrl(primaryUrl) + ';';
       mecard += 'NOTE:' + escMe(noteText) + ';';
       mecard += ';';
 
