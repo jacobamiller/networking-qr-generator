@@ -666,8 +666,12 @@
       if (profile.title) lines.push('TITLE:' + profile.title);
       if (profile.email) lines.push('EMAIL:' + profile.email);
       if (profile.phone) lines.push('TEL:' + profile.phone);
-      if (profile.website) lines.push('URL:' + ensureHttps(profile.website));
-      if (profile.linkedin) lines.push('URL:' + ensureHttps(profile.linkedin));
+      // Use a single URL field — multiple URLs confuse many QR scanners
+      // Priority: LinkedIn > website. Other goes into the note.
+      var primaryUrl = profile.linkedin ? ensureHttps(profile.linkedin) : (profile.website ? ensureHttps(profile.website) : '');
+      var secondaryUrl = profile.linkedin && profile.website ? ensureHttps(profile.website) : '';
+      if (primaryUrl) lines.push('URL:' + primaryUrl);
+      if (secondaryUrl) noteText += ' | Website: ' + secondaryUrl;
       lines.push('NOTE:' + escVCard(noteText));
       // Photo only if total stays under 1800 chars for QR reliability
       const base = lines.join('\n') + '\nEND:VCARD\n';
