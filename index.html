@@ -653,37 +653,32 @@
       return noteText;
     }
 
-    // MECARD format for QR codes — universally supported by iOS + Android cameras
-    // Supported fields: N, TEL, EMAIL, URL, ORG, NOTE, ADR, BDAY, NICKNAME
-    // NOT supported: TITLE (not part of MECARD spec)
-    function buildMecard(profile, eventName, eventDate, notes) {
-      let noteText = buildNoteText(profile, eventName, eventDate, notes);
-      // Add title to note since MECARD doesn't support TITLE
-      if (profile.title) noteText = profile.title + '. ' + noteText;
-      // Add secondary URL to note since MECARD only supports one URL
-      var primaryUrl = profile.linkedin ? ensureHttps(profile.linkedin) : (profile.website ? ensureHttps(profile.website) : '');
-      var secondaryUrl = profile.linkedin && profile.website ? ensureHttps(profile.website) : '';
-      if (secondaryUrl) noteText += ' Website: ' + secondaryUrl;
+    // Build a URL to the contact card page with data encoded in the hash
+    // This is the most universal approach — works on 100% of phones
+    // QR encodes a URL → phone opens browser → user sees contact card → taps "Add to Contacts"
+    function buildCardUrl(profile, eventName, eventDate, notes) {
+      const noteText = buildNoteText(profile, eventName, eventDate, notes);
+      const data = {
+        name: profile.name,
+        email: profile.email || undefined,
+        phone: profile.phone || undefined,
+        company: profile.company || undefined,
+        title: profile.title || undefined,
+        website: profile.website ? ensureHttps(profile.website) : undefined,
+        linkedin: profile.linkedin ? ensureHttps(profile.linkedin) : undefined,
+        photo: profile.photo ? ensureHttps(profile.photo) : undefined,
+        note: noteText,
+      };
+      // Remove undefined keys to keep URL short
+      Object.keys(data).forEach(k => { if (data[k] === undefined) delete data[k]; });
+      const json = JSON.stringify(data);
+      const hash = btoa(unescape(encodeURIComponent(json)));
 
-      const nameParts = profile.name.split(' ').filter(p => p);
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+      // Build URL relative to current page
+      const base = window.location.href.replace(/\/[^/]*$/, '/');
+      const cardUrl = base + 'c.html#' + hash;
 
-      // MECARD escaping: backslash-escape semicolons, colons, and backslashes
-      function escMe(s) { return s ? s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/:/g, '\\:') : ''; }
-      // URLs should NOT be escaped (colons are structural)
-      function escMeUrl(s) { return s ? s.replace(/\\/g, '\\\\').replace(/;/g, '\\;') : ''; }
-
-      let mecard = 'MECARD:';
-      mecard += 'N:' + escMe(lastName) + ',' + escMe(firstName) + ';';
-      if (profile.company) mecard += 'ORG:' + escMe(profile.company) + ';';
-      if (profile.email) mecard += 'EMAIL:' + profile.email + ';';
-      if (profile.phone) mecard += 'TEL:' + escMe(profile.phone) + ';';
-      if (primaryUrl) mecard += 'URL:' + escMeUrl(primaryUrl) + ';';
-      mecard += 'NOTE:' + escMe(noteText) + ';';
-      mecard += ';';
-
-      return { mecard, noteText };
+      return { cardUrl, noteText, charCount: cardUrl.length };
     }
 
     // vCard 3.0 for .vcf file download — full detail, multiple URLs, photo
@@ -767,22 +762,27 @@
         return;
       }
 
-      // MECARD for QR (universal phone camera support), vCard for .vcf download
-      const { mecard, noteText } = buildMecard(profile, eventName, eventDate, notes);
-      buildVCard(profile, eventName, eventDate, notes); // sets lastVCardData for download
+      // Build card URL for QR (opens contact page in browser — works on ALL phones)
+      const { cardUrl, noteText, charCount } = buildCardUrl(profile, eventName, eventDate, notes);
+      buildVCard(profile, eventName, eventDate, notes); // sets lastVCardData for .vcf download
+
+      // Warn if URL too long for reliable QR scanning
+      if (charCount > 2500) {
+        showToast('Warning: QR data is very large (' + charCount + ' chars). Shorten your note for reliable scanning.');
+      }
 
       // Clear previous QR code
       const qrEl = document.getElementById('qrcode');
       qrEl.innerHTML = '';
 
-      // Generate new QR code with MECARD
+      // Generate QR code with card URL
       new QRCode(qrEl, {
-        text: mecard,
+        text: cardUrl,
         width: 280,
         height: 280,
         colorDark: '#111827',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M,
+        correctLevel: QRCode.CorrectLevel.L, // Low error correction = more data capacity
       });
 
       // Show display area
@@ -798,10 +798,10 @@
         document.getElementById('qrDisplay').appendChild(debugEl);
       }
       debugEl.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
-        '<strong style="font-size:11px;">QR Data — MECARD (' + mecard.length + ' chars)</strong>' +
+        '<strong style="font-size:11px;">Card URL (' + charCount + ' chars)</strong>' +
         '<button onclick="downloadVcf()" style="padding:4px 10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px;">Download .vcf</button>' +
         '</div>' +
-        '<pre style="white-space:pre-wrap;word-break:break-all;font-size:9px;color:#374151;max-height:150px;overflow:auto;">' + mecard.replace(/</g, '&lt;') + '</pre>';
+        '<pre style="white-space:pre-wrap;word-break:break-all;font-size:9px;color:#374151;max-height:150px;overflow:auto;">' + cardUrl.replace(/</g, '&lt;') + '</pre>';
       document.getElementById('qrEventLabel').textContent = eventName ?
         eventName + ' \u2022 ' + formatDateReadable(eventDate) :
         formatDateReadable(eventDate);
@@ -842,18 +842,18 @@
       const { eventDate, eventName, notes, generatedAt } = JSON.parse(stored);
       lastGeneratedTimestamp = generatedAt;
 
-      const { mecard, noteText } = buildMecard(profile, eventName, eventDate, notes);
-      buildVCard(profile, eventName, eventDate, notes); // sets lastVCardData for download
+      const { cardUrl, noteText } = buildCardUrl(profile, eventName, eventDate, notes);
+      buildVCard(profile, eventName, eventDate, notes);
 
       const qrEl = document.getElementById('qrcode');
       qrEl.innerHTML = '';
       new QRCode(qrEl, {
-        text: mecard,
+        text: cardUrl,
         width: 280,
         height: 280,
         colorDark: '#111827',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M,
+        correctLevel: QRCode.CorrectLevel.L,
       });
 
       document.getElementById('qrDisplay').style.display = 'block';
