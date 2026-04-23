@@ -666,13 +666,14 @@
       if (profile.title) lines.push('TITLE:' + profile.title);
       if (profile.email) lines.push('EMAIL:' + profile.email);
       if (profile.phone) lines.push('TEL:' + profile.phone);
-      if (profile.website) lines.push('URL:' + profile.website);
-      if (profile.linkedin) lines.push('URL:' + profile.linkedin);
+      if (profile.website) lines.push('URL:' + ensureHttps(profile.website));
+      if (profile.linkedin) lines.push('URL:' + ensureHttps(profile.linkedin));
       lines.push('NOTE:' + escVCard(noteText));
       // Photo only if total stays under 1800 chars for QR reliability
       const base = lines.join('\n') + '\nEND:VCARD\n';
-      if (profile.photo && (base.length + profile.photo.length + 20) <= 1800) {
-        lines.push('PHOTO;VALUE=URI:' + profile.photo);
+      const photoUrl = ensureHttps(profile.photo);
+      if (photoUrl && (base.length + photoUrl.length + 20) <= 1800) {
+        lines.push('PHOTO;VALUE=URI:' + photoUrl);
       }
       lines.push('END:VCARD');
 
@@ -684,6 +685,13 @@
     function escVCard(str) {
       if (!str) return '';
       return str.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    }
+
+    function ensureHttps(url) {
+      if (!url) return '';
+      url = url.trim();
+      if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) return url;
+      return 'https://' + url;
     }
 
     // Store last vCard for download
