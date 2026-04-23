@@ -655,7 +655,7 @@
       noteText += ' on ' + formattedDate + '.';
       if (notes) noteText += ' ' + notes;
 
-      // Build vCard lines — same format as LinkedIn Lead Scorer (which works on iOS+Android)
+      // Build vCard — RFC 6350 requires \r\n line endings (Android strict)
       const lines = [
         'BEGIN:VCARD',
         'VERSION:3.0',
@@ -666,22 +666,21 @@
       if (profile.title) lines.push('TITLE:' + profile.title);
       if (profile.email) lines.push('EMAIL:' + profile.email);
       if (profile.phone) lines.push('TEL:' + profile.phone);
-      // Use a single URL field — multiple URLs confuse many QR scanners
-      // Priority: LinkedIn > website. Other goes into the note.
+      // Single URL — multiple confuse QR scanners
       var primaryUrl = profile.linkedin ? ensureHttps(profile.linkedin) : (profile.website ? ensureHttps(profile.website) : '');
       var secondaryUrl = profile.linkedin && profile.website ? ensureHttps(profile.website) : '';
       if (primaryUrl) lines.push('URL:' + primaryUrl);
-      if (secondaryUrl) noteText += ' | Website: ' + secondaryUrl;
+      if (secondaryUrl) noteText += '\\nWebsite: ' + secondaryUrl;
       lines.push('NOTE:' + escVCard(noteText));
       // Photo only if total stays under 1800 chars for QR reliability
-      const base = lines.join('\n') + '\nEND:VCARD\n';
+      const base = lines.join('\r\n') + '\r\nEND:VCARD\r\n';
       const photoUrl = ensureHttps(profile.photo);
-      if (photoUrl && (base.length + photoUrl.length + 20) <= 1800) {
+      if (photoUrl && (base.length + photoUrl.length + 25) <= 1800) {
         lines.push('PHOTO;VALUE=URI:' + photoUrl);
       }
       lines.push('END:VCARD');
 
-      const vcard = lines.join('\n') + '\n';
+      const vcard = lines.join('\r\n') + '\r\n';
       lastVCardData = vcard;
       return { vcard, noteText };
     }
@@ -703,7 +702,7 @@
 
     function downloadVcf() {
       if (!lastVCardData) return;
-      const blob = new Blob([lastVCardData], { type: 'text/vcard' });
+      const blob = new Blob([lastVCardData], { type: 'text/x-vcard' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
