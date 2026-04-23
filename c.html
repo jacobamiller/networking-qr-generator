@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Contact Card</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f3f4f6;
+    color: #1f2937;
+    min-height: 100dvh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 400px;
+    padding: 40px 24px 32px;
+    text-align: center;
+  }
+
+  .photo {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #e5e7eb;
+    margin: 0 auto 20px;
+    display: block;
+    background: #e5e7eb;
+  }
+
+  .photo-placeholder {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    font-size: 40px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    line-height: 1;
+  }
+
+  .name {
+    font-size: 26px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1.4;
+    margin-bottom: 20px;
+  }
+
+  .note-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 28px;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  .buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 50px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: #2563eb;
+    color: #fff;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+
+  .btn-linkedin {
+    background: #0a66c2;
+    color: #fff;
+  }
+  .btn-linkedin:hover { opacity: 0.9; }
+
+  .btn-outline {
+    background: #fff;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+  }
+  .btn-outline:hover { background: #f9fafb; }
+
+  .btn-icon { font-size: 20px; flex-shrink: 0; }
+
+  .error-container {
+    text-align: center;
+    padding: 60px 24px;
+  }
+
+  .error-container .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .error-container h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 8px;
+  }
+
+  .error-container p {
+    font-size: 15px;
+    color: #6b7280;
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="card"></div>
+
+<script>
+(function() {
+  var card = document.getElementById('card');
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function getInitials(name) {
+    if (!name) return '?';
+    var parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0][0].toUpperCase();
+  }
+
+  function parseContact() {
+    var hash = window.location.hash;
+    if (!hash || hash.length < 2) return null;
+
+    var encoded = hash.substring(1);
+    try {
+      var json = atob(encoded);
+      var data = JSON.parse(json);
+      if (!data || typeof data !== 'object') return null;
+      if (!data.name) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function generateVcf(data) {
+    var lines = [];
+    lines.push('BEGIN:VCARD');
+    lines.push('VERSION:3.0');
+
+    var nameParts = (data.name || '').trim().split(/\s+/);
+    var lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    var firstName = nameParts[0] || '';
+    lines.push('N:' + vcfEscape(lastName) + ';' + vcfEscape(firstName) + ';;;');
+    lines.push('FN:' + vcfEscape(data.name || ''));
+
+    if (data.company) lines.push('ORG:' + vcfEscape(data.company));
+    if (data.title) lines.push('TITLE:' + vcfEscape(data.title));
+    if (data.email) lines.push('EMAIL;TYPE=INTERNET:' + vcfEscape(data.email));
+    if (data.phone) lines.push('TEL;TYPE=CELL:' + vcfEscape(data.phone));
+    if (data.website) lines.push('URL:' + vcfEscape(data.website));
+    if (data.linkedin) lines.push('URL:' + vcfEscape(data.linkedin));
+    if (data.photo) lines.push('PHOTO;VALUE=URI:' + vcfEscape(data.photo));
+    if (data.note) lines.push('NOTE:' + vcfEscape(data.note));
+
+    lines.push('END:VCARD');
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  function vcfEscape(str) {
+    if (!str) return '';
+    return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  }
+
+  function downloadVcf(data) {
+    var vcf = generateVcf(data);
+    var blob = new Blob([vcf], { type: 'text/x-vcard;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (data.name || 'contact').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '.vcf';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function renderError() {
+    card.innerHTML =
+      '<div class="error-container">' +
+        '<div class="error-icon">&#9888;&#65039;</div>' +
+        '<h2>Invalid contact link</h2>' +
+        '<p>This link is missing or contains invalid contact data.</p>' +
+      '</div>';
+  }
+
+  function render(data) {
+    document.title = data.name + ' — Contact Card';
+    var html = '';
+
+    // Photo or initials
+    if (data.photo) {
+      html += '<img class="photo" src="' + escapeHtml(data.photo) + '" alt="' + escapeHtml(data.name) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">';
+      html += '<div class="photo-placeholder" style="display:none">' + escapeHtml(getInitials(data.name)) + '</div>';
+    } else {
+      html += '<div class="photo-placeholder">' + escapeHtml(getInitials(data.name)) + '</div>';
+    }
+
+    // Name
+    html += '<div class="name">' + escapeHtml(data.name) + '</div>';
+
+    // Title at Company
+    var subtitle = '';
+    if (data.title && data.company) subtitle = data.title + ' at ' + data.company;
+    else if (data.title) subtitle = data.title;
+    else if (data.company) subtitle = data.company;
+
+    if (subtitle) {
+      html += '<div class="subtitle">' + escapeHtml(subtitle) + '</div>';
+    }
+
+    // Note
+    if (data.note) {
+      html += '<div class="note-card">' + escapeHtml(data.note) + '</div>';
+    }
+
+    // Buttons
+    html += '<div class="buttons">';
+
+    // Add to Contacts
+    html += '<button class="btn btn-primary" id="addContact"><span class="btn-icon">&#128100;</span> Add to Contacts</button>';
+
+    // LinkedIn
+    if (data.linkedin) {
+      html += '<a class="btn btn-linkedin" href="' + escapeHtml(data.linkedin) + '" target="_blank" rel="noopener noreferrer"><span class="btn-icon">in</span> LinkedIn</a>';
+    }
+
+    // Website
+    if (data.website) {
+      html += '<a class="btn btn-outline" href="' + escapeHtml(data.website) + '" target="_blank" rel="noopener noreferrer"><span class="btn-icon">&#127760;</span> Website</a>';
+    }
+
+    // Email
+    if (data.email) {
+      html += '<a class="btn btn-outline" href="mailto:' + escapeHtml(data.email) + '"><span class="btn-icon">&#9993;&#65039;</span> ' + escapeHtml(data.email) + '</a>';
+    }
+
+    // Phone
+    if (data.phone) {
+      html += '<a class="btn btn-outline" href="tel:' + escapeHtml(data.phone) + '"><span class="btn-icon">&#128222;</span> ' + escapeHtml(data.phone) + '</a>';
+    }
+
+    html += '</div>';
+
+    card.innerHTML = html;
+
+    document.getElementById('addContact').addEventListener('click', function() {
+      downloadVcf(data);
+    });
+  }
+
+  var data = parseContact();
+  if (!data) {
+    renderError();
+  } else {
+    render(data);
+  }
+})();
+</script>
+</body>
+</html>
