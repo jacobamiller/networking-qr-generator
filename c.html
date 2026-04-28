@@ -206,7 +206,9 @@
     if (data.phone) lines.push('TEL:' + data.phone);
     if (data.website) lines.push('URL:' + data.website);
     if (data.linkedin) lines.push('URL:' + data.linkedin);
-    if (data.photo) lines.push('PHOTO;VALUE=URI:' + data.photo);
+    // PHOTO;VALUE=URI can cause Android import failures with some URLs
+    // Only include if URL has no query params (? causes parse issues)
+    if (data.photo && data.photo.indexOf('?') === -1) lines.push('PHOTO;VALUE=URI:' + data.photo);
     if (data.note) lines.push('NOTE:' + vcfEscape(data.note));
 
     lines.push('END:VCARD');
