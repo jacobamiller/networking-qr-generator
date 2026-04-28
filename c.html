@@ -202,11 +202,11 @@
 
     if (data.company) lines.push('ORG:' + vcfEscape(data.company));
     if (data.title) lines.push('TITLE:' + vcfEscape(data.title));
-    if (data.email) lines.push('EMAIL;TYPE=INTERNET:' + vcfEscape(data.email));
-    if (data.phone) lines.push('TEL;TYPE=CELL:' + vcfEscape(data.phone));
-    if (data.website) lines.push('URL:' + vcfEscape(data.website));
-    if (data.linkedin) lines.push('URL:' + vcfEscape(data.linkedin));
-    if (data.photo) lines.push('PHOTO;VALUE=URI:' + vcfEscape(data.photo));
+    if (data.email) lines.push('EMAIL:' + data.email);
+    if (data.phone) lines.push('TEL:' + data.phone);
+    if (data.website) lines.push('URL:' + data.website);
+    if (data.linkedin) lines.push('URL:' + data.linkedin);
+    if (data.photo) lines.push('PHOTO;VALUE=URI:' + data.photo);
     if (data.note) lines.push('NOTE:' + vcfEscape(data.note));
 
     lines.push('END:VCARD');
@@ -215,7 +215,9 @@
 
   function vcfEscape(str) {
     if (!str) return '';
-    return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    // Only escape backslashes, commas, and newlines in text values
+    // Do NOT escape semicolons — they are structural in vCard field names
+    return str.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/\n/g, '\\n');
   }
 
   function downloadVcf(data) {
