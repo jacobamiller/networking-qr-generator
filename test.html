@@ -5,7 +5,8 @@
 <h2>vCard Import Tests</h2>
 <p style="font-size:12px;color:#666;">Tap each button. If Android imports it, that format works.</p>
 
-<button onclick="test1()" style="display:block;width:100%;padding:12px;margin:10px 0;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;">Test 1: Bare minimum</button>
+<button onclick="test0()" style="display:block;width:100%;padding:12px;margin:10px 0;background:#666;color:#fff;border:none;border-radius:8px;font-size:14px;">Test 0: Open in new tab</button>
+<button onclick="test1()" style="display:block;width:100%;padding:12px;margin:10px 0;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;">Test 1: Bare minimum (v2.1)</button>
 <button onclick="test2()" style="display:block;width:100%;padding:12px;margin:10px 0;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;">Test 2: Name + Email + Phone</button>
 <button onclick="test3()" style="display:block;width:100%;padding:12px;margin:10px 0;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;">Test 3: All fields no photo</button>
 <button onclick="test4()" style="display:block;width:100%;padding:12px;margin:10px 0;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;">Test 4: All fields + photo</button>
@@ -36,7 +37,19 @@ function dl(vcf, name) {
 }
 
 function test1() {
-  dl("BEGIN:VCARD\r\nVERSION:3.0\r\nN:Test;;;;\r\nFN:Test\r\nEND:VCARD\r\n", "test1");
+  dl("BEGIN:VCARD\r\nVERSION:2.1\r\nN:Test;;;;\r\nFN:Test\r\nEND:VCARD\r\n", "test1_v21");
+}
+
+function test0() {
+  // Try saving as actual file via FileSaver approach
+  var vcf = "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Test;;;;\r\nFN:Test\r\nEND:VCARD\r\n";
+  document.getElementById('output').textContent = vcf;
+  // Open in new tab — some Android versions handle this better
+  var w = window.open('', '_blank');
+  if (w) {
+    w.document.write('<html><head><meta http-equiv="Content-Type" content="text/x-vcard; charset=utf-8"><meta http-equiv="Content-Disposition" content="attachment; filename=test.vcf"></head><body>' + vcf.replace(/\r\n/g,'<br>') + '</body></html>');
+    w.document.close();
+  }
 }
 
 function test2() {
