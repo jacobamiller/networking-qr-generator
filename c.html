@@ -220,23 +220,24 @@
 
   function downloadVcf(data) {
     var vcf = generateVcf(data);
+    var filename = (data.name || 'contact').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '.vcf';
 
-    // Try data URI first — opens contacts app directly on most phones
-    var dataUri = 'data:text/x-vcard;charset=utf-8,' + encodeURIComponent(vcf);
-    var w = window.open(dataUri, '_blank');
+    // Method 1: Navigate to data URI — triggers contacts app on Android
+    // This is the most reliable way to open a vCard on mobile
+    window.location.href = 'data:text/x-vcard;charset=utf-8,' + encodeURIComponent(vcf);
 
-    // Fallback to blob download if data URI was blocked (some browsers)
-    if (!w || w.closed) {
+    // Method 2: Fallback blob download after short delay (if data URI didn't navigate away)
+    setTimeout(function() {
       var blob = new Blob([vcf], { type: 'text/x-vcard;charset=utf-8' });
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = (data.name || 'contact').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_') + '.vcf';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
-    }
+    }, 1000);
   }
 
   function renderError() {
