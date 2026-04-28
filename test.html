@@ -16,10 +16,9 @@
 <script>
 function dl(vcf, name) {
   document.getElementById('output').textContent = vcf;
-  var blob = new Blob([vcf], {type: 'text/vcard'});
-  var url = URL.createObjectURL(blob);
+  // Method: data URI href — Android Chrome should recognize text/x-vcard
   var a = document.createElement('a');
-  a.href = url;
+  a.href = 'data:text/x-vcard;charset=utf-8,' + encodeURIComponent(vcf);
   a.download = name + '.vcf';
   document.body.appendChild(a);
   a.click();
