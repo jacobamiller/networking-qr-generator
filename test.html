@@ -16,13 +16,23 @@
 <script>
 function dl(vcf, name) {
   document.getElementById('output').textContent = vcf;
-  // Method: data URI href — Android Chrome should recognize text/x-vcard
-  var a = document.createElement('a');
-  a.href = 'data:text/x-vcard;charset=utf-8,' + encodeURIComponent(vcf);
-  a.download = name + '.vcf';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+
+  // Method A: Navigate directly to data URI (opens contacts app on Android)
+  var btn = document.createElement('a');
+  btn.href = 'data:text/x-vcard,' + encodeURIComponent(vcf);
+  btn.textContent = '→ Tap here to open in Contacts';
+  btn.style.cssText = 'display:block;padding:12px;margin:10px 0;background:#16a34a;color:#fff;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;';
+  document.getElementById('output').before(btn);
+
+  // Method B: Blob download
+  var blob = new Blob([vcf], {type: 'text/x-vcard'});
+  var url = URL.createObjectURL(blob);
+  var btn2 = document.createElement('a');
+  btn2.href = url;
+  btn2.download = name + '.vcf';
+  btn2.textContent = '→ Download .vcf file';
+  btn2.style.cssText = 'display:block;padding:12px;margin:10px 0;background:#e67e22;color:#fff;border-radius:8px;text-align:center;text-decoration:none;font-size:14px;';
+  document.getElementById('output').before(btn2);
 }
 
 function test1() {
